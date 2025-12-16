@@ -1,0 +1,50 @@
+{
+  "name": "facebook-messenger-electron",
+  "version": "0.1.0",
+  "description": "Simple Electron wrapper for Facebook Messenger (messenger.com)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --mac",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
+  },
+  "keywords": [
+    "electron",
+    "facebook",
+    "messenger"
+  ],
+  "author": "your-name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.messenger.electron",
+    "productName": "Messenger",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.social-networking",
+      "icon": "build/icon.icns"
+    }
+  }
+}
