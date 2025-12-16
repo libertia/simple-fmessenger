@@ -3,9 +3,13 @@ const { contextBridge, ipcRenderer, shell } = require('electron');
 // =====================================================
 // State Management
 // =====================================================
-let highestUnreadCount = 0;  // Highest count seen since last focus
-let lastNotifiedCount = 0;   // Count at which we last sent notification
+let lastTitle = '';           // Last stable title (after debounce)
+let lastNotifiedTitle = '';   // Title when we last notified
+let currentBadgeCount = 0;    // Current badge shown (only goes UP, never down)
+let debounceTimer = null;
 let isInitialized = false;
+
+const DEBOUNCE_MS = 800;      // Wait 800ms for title to stabilize
 
 // =====================================================
 // Expose APIs to Renderer
@@ -15,9 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     try {
       const parsed = new URL(url);
       shell.openExternal(parsed.toString());
-    } catch (err) {
-      // ignore invalid URLs
-    }
+    } catch (err) {}
   },
   
   updateBadge: (count) => {
@@ -40,71 +42,90 @@ contextBridge.exposeInMainWorld('electronAPI', {
 /**
  * Extract unread count from page title
  */
-function getUnreadCountFromTitle() {
-  const title = document.title;
+function getUnreadCountFromTitle(title) {
   const match = title.match(/^\((\d+)\)/);
   return match ? parseInt(match[1], 10) : 0;
 }
 
 /**
- * Handle unread count changes
+ * Process title change after debounce
  */
-function handleUnreadCountChange(newCount) {
-  // Always update badge with current count
-  ipcRenderer.send('update-badge', newCount);
+function processStableTitle(newTitle) {
+  const count = getUnreadCountFromTitle(newTitle);
   
-  // Update highest seen count
-  if (newCount > highestUnreadCount) {
-    highestUnreadCount = newCount;
+  // Badge logic: only UPDATE if count is HIGHER than current
+  // This prevents flickering - badge never goes down until reset
+  if (count > currentBadgeCount) {
+    currentBadgeCount = count;
+    ipcRenderer.send('update-badge', count);
+    console.log('[Messenger] Badge updated to:', count);
   }
   
-  // Only show notification if count exceeds our last notified count
-  // This prevents repeated notifications when title flickers
-  if (newCount > lastNotifiedCount && newCount > 0) {
-    const diff = newCount - lastNotifiedCount;
-    
-    console.log('[Messenger] New messages:', diff, 'Total:', newCount);
+  // Notification logic: notify if title changed and has unread
+  if (count > 0 && newTitle !== lastNotifiedTitle) {
+    console.log('[Messenger] New message detected');
     
     ipcRenderer.send('show-notification', {
       title: 'New Message',
-      body: diff === 1 
-        ? 'You have a new message'
-        : `You have ${diff} new messages`,
+      body: 'You have a new message',
       silent: false
     });
     
-    // Remember that we notified at this count
-    lastNotifiedCount = newCount;
+    lastNotifiedTitle = newTitle;
   }
+  
+  lastTitle = newTitle;
 }
 
 /**
- * Reset counters when window gets focus (user has seen messages)
+ * Handle title change with debounce
+ */
+function handleTitleChange() {
+  const currentTitle = document.title;
+  
+  // Clear any pending debounce
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+  
+  // Debounce both badge and notification
+  debounceTimer = setTimeout(() => {
+    processStableTitle(currentTitle);
+  }, DEBOUNCE_MS);
+}
+
+/**
+ * Reset when window gets focus - user has seen messages
  */
 function setupFocusHandler() {
   window.addEventListener('focus', () => {
-    console.log('[Messenger] Window focused, resetting notification counter');
-    // Reset counters - user has seen the messages
-    const currentCount = getUnreadCountFromTitle();
-    lastNotifiedCount = currentCount;
-    highestUnreadCount = currentCount;
+    console.log('[Messenger] Window focused, resetting counters');
+    
+    // Get actual current count
+    const actualCount = getUnreadCountFromTitle(document.title);
+    
+    // Reset everything
+    currentBadgeCount = actualCount;
+    lastNotifiedTitle = document.title;
+    lastTitle = document.title;
+    
+    // Update badge to actual count (might be 0 if user read messages)
+    ipcRenderer.send('update-badge', actualCount);
   });
 }
 
 /**
- * Watch for title changes to detect new messages
+ * Watch for title changes
  */
 function watchTitleChanges() {
   const titleElement = document.querySelector('title');
   if (!titleElement) {
-    console.log('[Messenger] Title element not found, retrying...');
     setTimeout(watchTitleChanges, 1000);
     return;
   }
   
   const titleObserver = new MutationObserver(() => {
-    const count = getUnreadCountFromTitle();
-    handleUnreadCountChange(count);
+    handleTitleChange();
   });
   
   titleObserver.observe(titleElement, {
@@ -113,23 +134,25 @@ function watchTitleChanges() {
     subtree: true
   });
   
-  // Initial setup - don't notify for existing messages
-  const initialCount = getUnreadCountFromTitle();
-  lastNotifiedCount = initialCount;
-  highestUnreadCount = initialCount;
+  // Initial setup - don't notify for existing state
+  const initialTitle = document.title;
+  const initialCount = getUnreadCountFromTitle(initialTitle);
+  
+  lastTitle = initialTitle;
+  lastNotifiedTitle = initialTitle;
+  currentBadgeCount = initialCount;
+  
   ipcRenderer.send('update-badge', initialCount);
   
   console.log('[Messenger] Initialized with count:', initialCount);
 }
 
 /**
- * Initialize all watchers
+ * Initialize
  */
 function initializeWatchers() {
   if (isInitialized) return;
   isInitialized = true;
-  
-  console.log('[Messenger] Initializing...');
   
   setupFocusHandler();
   watchTitleChanges();
