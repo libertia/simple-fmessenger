@@ -24,40 +24,45 @@ function createWindow() {
   // Show when ready to avoid white flash
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
-  // Open external links (outside messenger/facebook) in the default browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  // Helper function to check if URL is an allowed domain
+  const isAllowedDomain = (url) => {
     try {
       const parsed = new URL(url);
-      const allowedOrigins = ['https://www.messenger.com', 'https://www.facebook.com'];
-      if (allowedOrigins.includes(parsed.origin)) {
-        return { action: 'allow' };
-      }
+      const hostname = parsed.hostname.toLowerCase();
+      // Allow messenger.com and facebook.com and all their subdomains
+      return hostname.endsWith('messenger.com') || 
+             hostname.endsWith('facebook.com') ||
+             hostname === 'messenger.com' ||
+             hostname === 'facebook.com';
     } catch (err) {
-      // If URL is malformed, open externally as fallback
+      return false;
     }
+  };
+
+  // Open external links (outside messenger/facebook) in the default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedDomain(url)) {
+      return { action: 'allow' };
+    }
+    // Open in external browser for non-messenger/facebook domains
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
   // Prevent navigation away from messenger to unknown sites inside the app
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    try {
-      const parsed = new URL(url);
-      const allowedOrigins = ['https://www.messenger.com', 'https://www.facebook.com'];
-      if (!allowedOrigins.includes(parsed.origin)) {
-        event.preventDefault();
-        shell.openExternal(url);
-      }
-    } catch (err) {
-      // If parsing fails, block navigation
+    if (!isAllowedDomain(url)) {
       event.preventDefault();
+      shell.openExternal(url);
     }
   });
 
-  // Optional: handle links clicked inside pages (anchor target=_blank)
+  // Handle new window requests (for older Electron versions compatibility)
   mainWindow.webContents.on('new-window', (event, url) => {
     event.preventDefault();
-    shell.openExternal(url);
+    if (!isAllowedDomain(url)) {
+      shell.openExternal(url);
+    }
   });
 }
 
