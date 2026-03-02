@@ -19,7 +19,7 @@ function createWindow() {
   // Set a desktop-like user agent so the site serves the web UI
   const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118 Safari/537.36 ElectronApp';
 
-  mainWindow.loadURL('https://www.messenger.com', { userAgent });
+  mainWindow.loadURL('https://facebook.com/messages', { userAgent });
 
   // Show when ready to avoid white flash
   mainWindow.once('ready-to-show', () => mainWindow.show());
