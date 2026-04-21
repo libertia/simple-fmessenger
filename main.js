@@ -1,13 +1,65 @@
-const { app, BrowserWindow, shell, ipcMain, Notification, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Notification, desktopCapturer } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 let mainWindow = null;
 let gatherWindow = null;
+const linuxIconPath = path.join(__dirname, 'build', 'icon.png');
+const windowIcon = process.platform === 'linux' && fs.existsSync(linuxIconPath) ? linuxIconPath : undefined;
+
+function isGatherDomainUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    return hostname === 'gather.town' || hostname.endsWith('.gather.town');
+  } catch (err) {
+    return false;
+  }
+}
+
+function setupGatherScreenSharePermissions(gatherSession) {
+  // Allow Gather origins to request media/screen permissions in this session.
+  gatherSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const isGatherOrigin = isGatherDomainUrl(details?.requestingUrl || details?.embeddingOrigin || '');
+    const allowedPermission = permission === 'media' || permission === 'display-capture';
+    callback(Boolean(isGatherOrigin && allowedPermission));
+  });
+
+  gatherSession.setDisplayMediaRequestHandler(
+    async (request, callback) => {
+      const frameUrl = request?.frame?.url || '';
+      if (!isGatherDomainUrl(frameUrl)) {
+        callback({});
+        return;
+      }
+
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+        const source = sources[0];
+
+        if (!source) {
+          callback({});
+          return;
+        }
+
+        callback({
+          video: source,
+          audio: request.audioRequested ? 'loopback' : 'none'
+        });
+      } catch (err) {
+        console.error('[Gather] Failed to get screen sources:', err);
+        callback({});
+      }
+    },
+    { useSystemPicker: true }
+  );
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 760,
+    icon: windowIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -71,14 +123,18 @@ function createGatherWindow() {
   gatherWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: windowIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: false,
+      partition: 'persist:gather'
     },
     show: false
   });
+
+  setupGatherScreenSharePermissions(gatherWindow.webContents.session);
 
   const gatherUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
