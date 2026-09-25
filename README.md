@@ -20,8 +20,19 @@ A small Electron app that opens https://www.messenger.com in a native window.
    ```
 3. Run:
    ```
-   npm start
+   npm run start:messenger   # Facebook Messenger
+   npm run start:gather      # Gather
    ```
+
+## Two apps
+Messenger and Gather are built as separate apps from this repo, each with its own entry point, build config, app ID and profile folder, so both can be installed and run side by side.
+
+| App       | Entry point          | Build config                     | Output           |
+|-----------|----------------------|----------------------------------|------------------|
+| Messenger | `apps/messenger.js`  | `electron-builder.messenger.json` | `dist/messenger` |
+| Gather    | `apps/gather.js`     | `electron-builder.gather.json`    | `dist/gather`    |
+
+Build with `npm run build:<messenger|gather>:<win|mac|linux>` (or `npm run build:linux` for both).
 
 ## Notes & Suggestions
 - The app uses the default Electron session so your Messenger login persists across runs.

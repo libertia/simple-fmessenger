@@ -1,0 +1,49 @@
+{
+  "appId": "com.gather.electron",
+  "productName": "Gather",
+  "extraMetadata": {
+    "name": "gather-electron",
+    "main": "apps/gather.js"
+  },
+  "directories": {
+    "output": "dist/gather"
+  },
+  "files": [
+    "apps/gather.js",
+    "windows/gather.js",
+    "windows/shared.js",
+    "preload/gather.js",
+    "package.json",
+    "build/gather.png"
+  ],
+  "win": {
+    "target": [
+      "nsis",
+      "portable"
+    ],
+    "icon": "build/gather.ico"
+  },
+  "mac": {
+    "target": [
+      "dmg",
+      "zip"
+    ],
+    "category": "public.app-category.business",
+    "icon": "build/gather.png",
+    "hardenedRuntime": true,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSCameraUsageDescription": "Gather uses the camera for video calls.",
+      "NSMicrophoneUsageDescription": "Gather uses the microphone for voice calls."
+    }
+  },
+  "linux": {
+    "target": [
+      "AppImage",
+      "deb"
+    ],
+    "category": "Network",
+    "icon": "build/gather.png"
+  }
+}

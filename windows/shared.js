@@ -3,10 +3,13 @@ const path = require('path');
 const fs = require('fs');
 
 const ROOT_DIR = path.join(__dirname, '..');
-const ICON_PATH = path.join(ROOT_DIR, 'build', 'icon.png');
+const ICON_DIR = path.join(ROOT_DIR, 'build');
 const PRELOAD_DIR = path.join(ROOT_DIR, 'preload');
 
-const windowIcon = process.platform === 'linux' && fs.existsSync(ICON_PATH) ? ICON_PATH : undefined;
+// Path to an app's PNG icon in build/ (e.g. 'facebook' -> build/facebook.png)
+function iconPath(name) {
+  return path.join(ICON_DIR, `${name}.png`);
+}
 
 // True if the URL's host is one of the given domains or a subdomain of them
 function isUrlOnDomains(url, domains) {
@@ -19,7 +22,10 @@ function isUrlOnDomains(url, domains) {
 }
 
 // Create a hidden BrowserWindow with the shared defaults; it is shown once ready to avoid a white flash
-function createAppWindow({ width, height, preload, partition }) {
+function createAppWindow({ width, height, preload, partition, icon }) {
+  // Only Linux needs the window icon set explicitly; other platforms use the packaged app icon
+  const windowIcon = process.platform === 'linux' && icon && fs.existsSync(icon) ? icon : undefined;
+
   const win = new BrowserWindow({
     width,
     height,
@@ -48,7 +54,7 @@ function focusWindow(win) {
 }
 
 module.exports = {
-  ICON_PATH,
+  iconPath,
   isUrlOnDomains,
   createAppWindow,
   focusWindow

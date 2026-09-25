@@ -1,10 +1,12 @@
 const { app, shell, ipcMain, Notification } = require('electron');
-const { ICON_PATH, isUrlOnDomains, createAppWindow, focusWindow } = require('./shared');
+const { iconPath, isUrlOnDomains, createAppWindow, focusWindow } = require('./shared');
 
 const MESSENGER_URL = 'https://facebook.com/messages';
 // Desktop-like user agent so the site serves the web UI
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118 Safari/537.36 ElectronApp';
 const ALLOWED_DOMAINS = ['messenger.com', 'facebook.com'];
+
+const ICON_PATH = iconPath('facebook');
 
 let messengerWindow = null;
 
@@ -55,7 +57,7 @@ function guardNavigation(contents, onExternal) {
 }
 
 function createMessengerWindow() {
-  messengerWindow = createAppWindow({ width: 1100, height: 760, preload: 'messenger.js' });
+  messengerWindow = createAppWindow({ width: 1100, height: 760, preload: 'messenger.js', icon: ICON_PATH });
 
   messengerWindow.loadURL(MESSENGER_URL, { userAgent: USER_AGENT });
 
@@ -143,7 +145,12 @@ function registerMessengerIpc() {
   });
 }
 
+function focusMessengerWindow() {
+  focusWindow(messengerWindow);
+}
+
 module.exports = {
   createMessengerWindow,
+  focusMessengerWindow,
   registerMessengerIpc
 };

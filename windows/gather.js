@@ -1,11 +1,13 @@
 const { desktopCapturer } = require('electron');
-const { isUrlOnDomains, createAppWindow } = require('./shared');
+const { iconPath, isUrlOnDomains, createAppWindow, focusWindow } = require('./shared');
 
 const GATHER_URL = 'https://app.gather.town/app';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 const GATHER_DOMAINS = ['gather.town'];
 // Web Notifications from Gather are shown by Electron as native desktop notifications
 const ALLOWED_PERMISSIONS = ['media', 'display-capture', 'notifications'];
+
+const ICON_PATH = iconPath('gather');
 
 let gatherWindow = null;
 
@@ -56,7 +58,7 @@ function setupPermissions(gatherSession) {
 }
 
 function createGatherWindow() {
-  gatherWindow = createAppWindow({ width: 1200, height: 800, preload: 'gather.js', partition: 'persist:gather' });
+  gatherWindow = createAppWindow({ width: 1200, height: 800, preload: 'gather.js', partition: 'persist:gather', icon: ICON_PATH });
 
   setupPermissions(gatherWindow.webContents.session);
 
@@ -69,6 +71,11 @@ function createGatherWindow() {
   return gatherWindow;
 }
 
+function focusGatherWindow() {
+  focusWindow(gatherWindow);
+}
+
 module.exports = {
-  createGatherWindow
+  createGatherWindow,
+  focusGatherWindow
 };
