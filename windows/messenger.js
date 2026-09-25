@@ -8,12 +8,50 @@ const ALLOWED_DOMAINS = ['messenger.com', 'facebook.com'];
 
 let messengerWindow = null;
 
+// Facebook wraps outgoing links in a redirect shim (l.facebook.com/l.php?u=<target>)
+const LINK_SHIM_HOSTS = ['l.facebook.com', 'lm.facebook.com', 'l.messenger.com'];
+
 function isAllowedUrl(url) {
   return isUrlOnDomains(url, ALLOWED_DOMAINS);
 }
 
+// Unwrap a link-shim URL to its real target so it can be checked against the allowed domains
+function resolveLinkShim(url) {
+  try {
+    const parsed = new URL(url);
+    if (LINK_SHIM_HOSTS.includes(parsed.hostname.toLowerCase()) && parsed.pathname === '/l.php') {
+      const target = parsed.searchParams.get('u');
+      if (target) return target;
+    }
+  } catch (err) {
+    // Not a valid URL, fall through
+  }
+  return url;
+}
+
+// Open non-allowed URLs in the default browser; returns true if the URL was sent out
+function openExternalIfNeeded(url) {
+  const target = resolveLinkShim(url);
+  if (isAllowedUrl(target)) return false;
+  shell.openExternal(target);
+  return true;
+}
+
 function isMessengerFocused() {
   return Boolean(messengerWindow && !messengerWindow.isDestroyed() && messengerWindow.isFocused());
+}
+
+// Send navigations/redirects to non-allowed sites to the default browser instead
+function guardNavigation(contents, onExternal) {
+  const handler = (event, url, isInPlace, isMainFrame) => {
+    if ((event.isMainFrame ?? isMainFrame) === false) return;
+    if (openExternalIfNeeded(url)) {
+      event.preventDefault();
+      if (onExternal) onExternal();
+    }
+  };
+  contents.on('will-navigate', handler);
+  contents.on('will-redirect', handler);
 }
 
 function createMessengerWindow() {
@@ -23,19 +61,15 @@ function createMessengerWindow() {
 
   // Open external links (outside messenger/facebook) in the default browser
   messengerWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isAllowedUrl(url)) {
-      return { action: 'allow' };
-    }
-    shell.openExternal(url);
-    return { action: 'deny' };
+    return openExternalIfNeeded(url) ? { action: 'deny' } : { action: 'allow' };
   });
 
   // Prevent navigation away from messenger to unknown sites inside the app
-  messengerWindow.webContents.on('will-navigate', (event, url) => {
-    if (!isAllowedUrl(url)) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
+  guardNavigation(messengerWindow.webContents);
+
+  // Popups allowed above may still redirect off-site, so guard them too
+  messengerWindow.webContents.on('did-create-window', (childWindow) => {
+    guardNavigation(childWindow.webContents, () => childWindow.close());
   });
 
   messengerWindow.on('closed', () => {
