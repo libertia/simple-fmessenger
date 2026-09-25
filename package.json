@@ -17,7 +17,7 @@
   "author": "your-name",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^26.0.0",
+    "electron": "^43.7.5",
     "electron-builder": "^24.0.0"
   },
   "build": {
@@ -28,6 +28,7 @@
     },
     "files": [
       "main.js",
+      "windows/**/*",
       "preload.js",
       "package.json",
       "build/icon.png",
