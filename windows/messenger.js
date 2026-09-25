@@ -17,7 +17,7 @@ function isMessengerFocused() {
 }
 
 function createMessengerWindow() {
-  messengerWindow = createAppWindow({ width: 1100, height: 760 });
+  messengerWindow = createAppWindow({ width: 1100, height: 760, preload: 'messenger.js' });
 
   messengerWindow.loadURL(MESSENGER_URL, { userAgent: USER_AGENT });
 

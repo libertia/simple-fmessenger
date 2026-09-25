@@ -29,7 +29,7 @@
     "files": [
       "main.js",
       "windows/**/*",
-      "preload.js",
+      "preload/**/*",
       "package.json",
       "build/icon.png",
       "build/icon.svg"

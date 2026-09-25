@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const ICON_PATH = path.join(ROOT_DIR, 'build', 'icon.png');
-const PRELOAD_PATH = path.join(ROOT_DIR, 'preload.js');
+const PRELOAD_DIR = path.join(ROOT_DIR, 'preload');
 
 const windowIcon = process.platform === 'linux' && fs.existsSync(ICON_PATH) ? ICON_PATH : undefined;
 
@@ -19,13 +19,13 @@ function isUrlOnDomains(url, domains) {
 }
 
 // Create a hidden BrowserWindow with the shared defaults; it is shown once ready to avoid a white flash
-function createAppWindow({ width, height, partition }) {
+function createAppWindow({ width, height, preload, partition }) {
   const win = new BrowserWindow({
     width,
     height,
     icon: windowIcon,
     webPreferences: {
-      preload: PRELOAD_PATH,
+      preload: path.join(PRELOAD_DIR, preload),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
