@@ -1,6 +1,6 @@
 {
   "name": "facebook-messenger-electron",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Simple Electron wrappers for Facebook Messenger and Gather, built as two separate apps",
   "main": "apps/messenger.js",
   "scripts": {

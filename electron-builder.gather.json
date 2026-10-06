@@ -13,6 +13,7 @@
     "windows/gather.js",
     "windows/shared.js",
     "preload/gather.js",
+    "preload/gather-audio-boost.js",
     "package.json",
     "build/gather.png"
   ],

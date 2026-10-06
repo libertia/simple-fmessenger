@@ -48,7 +48,8 @@ There are three layers, with one file per app in each:
 ### Gather specifics
 - **Separate profile**: `app.setName('Gather')`, a `userData` folder at `<appData>/Gather`, and session partition `persist:gather`, so Gather can run alongside Messenger.
 - **Permissions**: `media`, `display-capture` and `notifications` are granted only to `gather.town` origins. Screen share goes through `setDisplayMediaRequestHandler` with `useSystemPicker: true`.
-- **Notifications** use the web Notification API, which Electron turns into native notifications. `preload/gather.js` is intentionally empty so that Messenger's title watcher does not run on Gather.
+- **Notifications** use the web Notification API, which Electron turns into native notifications. `preload/gather.js` does not include Messenger's title watcher.
+- **Quiet-audio boost** (Audio menu → Off/Low/Medium/High, saved in `<userData>/settings.json`): `preload/gather.js` fetches the level with sync IPC and runs `preload/gather-audio-boost.js` in the page's main world through `contextBridge.executeInMainWorld`. That script sends the page's audio through a compressor, then makeup gain, then a limiter, so quiet audio gets louder while peaks stay at their original maximum. It hooks `AudioNode.connect`/`disconnect` to `ctx.destination`, and `HTMLMediaElement.srcObject`. When a MediaStream is assigned to `srcObject`, the stream plays through Web Audio, the real element stays muted, and the element's `volume`/`muted` values are virtualized. The presets live in `AUDIO_BOOST_PRESETS` in `windows/gather.js`.
 
 ## Packaging
 
